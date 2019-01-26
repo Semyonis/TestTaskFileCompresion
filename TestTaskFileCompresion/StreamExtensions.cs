@@ -6,9 +6,6 @@ namespace TestTaskFileCompression
 {
     public static class StreamExtensions
     {
-        private const int ZIP_LEAD_BYTES = 0x04034b50;
-        private const ushort GZIP_LEAD_BYTES = 0x8b1f;
-
         public static void DecompressToStream(this Stream inStream,
             Stream outStream,
             byte[] buffer,
@@ -53,11 +50,10 @@ namespace TestTaskFileCompression
             stream.Seek(0, SeekOrigin.Begin);
             stream.Read(bytes, 0, 4);
 
-            return IsZipCompressed(bytes) || IsGZipCompressed(bytes);
+            return IsCustomGZipCompressed(bytes);
         }
 
-        private static bool IsZipCompressed(byte[] bytes) { return BitConverter.ToInt32(bytes, 0) == ZIP_LEAD_BYTES; }
 
-        private static bool IsGZipCompressed(byte[] bytes) { return BitConverter.ToUInt16(bytes, 0) == GZIP_LEAD_BYTES; }
+        private static bool IsCustomGZipCompressed(byte[] bytes) { return BitConverter.ToUInt16(bytes, 0) == 666; }
     }
 }

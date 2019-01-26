@@ -20,7 +20,6 @@ namespace TestTaskFileCompression
         private int totalPartCount;
 
         private string outputFilePath;
-        private byte[] buffer;
         private CompressionMode mode;
 
         private ScheduledWriter()
@@ -67,14 +66,19 @@ namespace TestTaskFileCompression
             }
             catch (Exception e)
             {
-                var errorMessage = "Unhandled exception in writer worker: " + e.Message;
-                Console.WriteLine(e);
+                var errorMessage = "Exception in writer worker: " + e.Message;
+                Console.WriteLine(errorMessage);
             }
         }
 
         private void StartWriterWorker(int millisecondsToSleep)
         {
             var outFileStream = File.Create(outputFilePath);
+            if (mode == CompressionMode.Compress)
+            {
+                var bytes = BitConverter.GetBytes((int)666);
+                outFileStream.Write(bytes, 0, 4);
+            }
 
             var wrotePartCount = 0;
             while (!isStreamSliceFinished && totalPartCount > 0 || wrotePartCount < totalPartCount)
@@ -103,11 +107,14 @@ namespace TestTaskFileCompression
                     }
 
                     nextPart.ResultStream.Seek(0, SeekOrigin.Begin);
-                    buffer = new byte[nextPart.ResultStream.Length];
+                    var buffer = new byte[nextPart.ResultStream.Length];
                     nextPart.ResultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
-                    buffer = null;
-
                     nextPart.ResultStream.Close();
+
+                    lock (queue)
+                    {
+                        queue.Remove(nextPart);
+                    }
 
                     wrotePartCount++;
                 }

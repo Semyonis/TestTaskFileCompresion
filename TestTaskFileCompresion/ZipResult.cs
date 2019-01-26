@@ -2,25 +2,16 @@
 
 namespace TestTaskFileCompression
 {
-    public struct ZipResult
+    public sealed class ZipResult
     {
-        private readonly int index;
-        private readonly Stream outStream;
-
         public ZipResult(int partIndex, Stream outStream)
         {
-            index = partIndex;
-            this.outStream = outStream;
+            PartIndex = partIndex;
+            ResultStream = outStream;
         }
 
-        public int PartIndex
-        {
-            get { return index; }
-        }
+        public int PartIndex { get; private set; }
 
-        public Stream ResultStream
-        {
-            get { return outStream; }
-        }
+        public Stream ResultStream { get; private set; }
     }
 }

@@ -40,9 +40,13 @@
     <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CompressionParameters.cs" />
+    <Compile Include="DecompressionParameters.cs" />
+    <Compile Include="MultithreadDecompressLogic.cs" />
+    <Compile Include="MultithreadCompressLogic.cs" />
     <Compile Include="ScheduledWriter.cs" />
     <Compile Include="StreamExtensions.cs" />
-    <Compile Include="OperationLogic.cs" />
+    <Compile Include="MultithreadOperationLogic.cs" />
     <Compile Include="OperationParameters.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

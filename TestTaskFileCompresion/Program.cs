@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 
 namespace TestTaskFileCompression
 {
@@ -49,10 +50,10 @@ namespace TestTaskFileCompression
                 throw new ArgumentException("Specified as output directory is not existed");
             }
 
-            if (File.Exists(outputFilePath))
-            {
-                throw new ArgumentException("Specified as output file is already existed");
-            }
+            //if (File.Exists(outputFilePath))
+            //{
+            //    throw new ArgumentException("Specified as output file is already existed");
+            //}
 
             var destinationDrive = DriveInfo.GetDrives()
                 .Single(drive => drive.RootDirectory.Name == Path.GetPathRoot(outputFilePath));
@@ -64,6 +65,11 @@ namespace TestTaskFileCompression
                     throw new Exception("Specified as input file is already compressed");
                 }
 
+                if (!isCompressOperation && !inputFileStream.IsCompressed())
+                {
+                    throw new Exception("Specified as input file is not compressed");
+                }
+
                 if (destinationDrive.AvailableFreeSpace < inputFileStream.Length)
                 {
                     throw new Exception("Specified as output directory have not enough free space");
@@ -72,8 +78,28 @@ namespace TestTaskFileCompression
 
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
-            new OperationLogic(operationType, inputFilePath, outputFilePath)
-                .Call();
+            Initialization(operationType, inputFilePath, outputFilePath);
+        }
+
+        private static void Initialization(CompressionMode operationType, string inputFilePath, string outputFilePath)
+        {
+            ScheduledWriter.Instance.SetOutputFile(outputFilePath);
+            ScheduledWriter.Instance.SetOperation(operationType);
+
+            MultithreadOperationLogic logic;
+            if (operationType == CompressionMode.Compress)
+            {
+                logic = new MultithreadCompressLogic(inputFilePath);
+            }
+            else
+            {
+                logic = new MultithreadDecompressLogic(inputFilePath);
+            }
+            logic.Call();
+
+            var writerThread = new Thread(ScheduledWriter.Instance.StartWorker);
+            writerThread.Start();
+            writerThread.Join();
         }
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
