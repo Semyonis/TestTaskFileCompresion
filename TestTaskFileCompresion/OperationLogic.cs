@@ -28,32 +28,46 @@ namespace TestTaskFileCompression
 
         public void Call()
         {
-            var writerThread = new Thread(ScheduledWriter.Instance.StartWriter);
+            var writerThread = new Thread(ScheduledWriter.Instance.StartWorker);
             writerThread.Start();
 
             using (var inFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                var readTotal = 0l;
+                var readTotal = 0L;
 
-                int partIndex = 0;
+                var partIndex = 0;
+
                 while (true)
                 {
                     semaphore.WaitOne();
 
                     ScheduledWriter.Instance.IncrementPartCount();
+                    ScheduledWriter.Instance.SetOperation(operationType);
 
                     var inPartStream = new MemoryStream();
 
-                    var count = (int) (inFileStream.Length / procCount);
+                    int count;
+                    if (operationType == CompressionMode.Decompress)
+                    {
+                        var array = new byte[4];
+                        inFileStream.Read(array, 0, 4);
+                        count = BitConverter.ToInt32(array, 0);
+                    }
+                    else
+                    {
+                        count = (int)( inFileStream.Length / procCount );
+                    }
+
                     var buffer = new byte[count];
 
                     var readCount = inFileStream.CopyTo(inPartStream, buffer, 0, count);
 
                     inPartStream.Seek(0, SeekOrigin.Begin);
 
-                    var outStream = new MemoryStream();
-                    var parameters = new OperationParameters(inPartStream, outStream, operationType, partIndex);
-                    var start = new ThreadStart(parameters.CallOperation);
+                    var outPartStream = new MemoryStream();
+
+                    var parameters = new OperationParameters(operationType, inPartStream, outPartStream, partIndex);
+                    var start = new ThreadStart(parameters.StartWorker);
 
                     var thread = new Thread(start);
 

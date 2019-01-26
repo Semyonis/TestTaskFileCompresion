@@ -32,6 +32,11 @@ namespace TestTaskFileCompression
                 throw new ArgumentException("Incorrect operation name");
             }
 
+            var isCompressOperation = operationName == COMPRESS_OPERATION;
+            var operationType = isCompressOperation
+                ? CompressionMode.Compress
+                : CompressionMode.Decompress;
+
             var inputFilePath = args[1].Trim();
             if (!File.Exists(inputFilePath))
             {
@@ -54,7 +59,7 @@ namespace TestTaskFileCompression
 
             using (var inputFileStream = File.OpenRead(inputFilePath))
             {
-                if (inputFileStream.IsCompressed())
+                if (isCompressOperation && inputFileStream.IsCompressed())
                 {
                     throw new Exception("Specified as input file is already compressed");
                 }
@@ -66,10 +71,6 @@ namespace TestTaskFileCompression
             }
 
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-
-            var operationType = operationName == COMPRESS_OPERATION
-                ? CompressionMode.Compress
-                : CompressionMode.Decompress;
 
             new OperationLogic(operationType, inputFilePath, outputFilePath)
                 .Call();

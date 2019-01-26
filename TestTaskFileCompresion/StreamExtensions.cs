@@ -9,19 +9,27 @@ namespace TestTaskFileCompression
         private const int ZIP_LEAD_BYTES = 0x04034b50;
         private const ushort GZIP_LEAD_BYTES = 0x8b1f;
 
-        public static void DecompressToStream(this Stream inStream, Stream outStream, byte[] buffer, int offset, int length)
+        public static void DecompressToStream(this Stream inStream,
+            Stream outStream,
+            byte[] buffer,
+            int offset,
+            int length)
         {
             using (var decompressionStream = new GZipStream(inStream, CompressionMode.Decompress))
             {
                 int read;
-                while ((read = decompressionStream.Read(buffer, offset, length) ) > 0)
+                while (( read = decompressionStream.Read(buffer, offset, length) ) > 0)
                 {
                     outStream.Write(buffer, offset, read);
                 }
             }
         }
 
-        public static void CompressToStream(this Stream inStream, Stream outStream, byte[] buffer, int offset, int length)
+        public static void CompressToStream(this Stream inStream,
+            Stream outStream,
+            byte[] buffer,
+            int offset,
+            int length)
         {
             using (var compressionStream = new GZipStream(outStream, CompressionMode.Compress, true))
             {
@@ -48,14 +56,8 @@ namespace TestTaskFileCompression
             return IsZipCompressed(bytes) || IsGZipCompressed(bytes);
         }
 
-        private static bool IsZipCompressed(byte[] bytes)
-        {
-            return BitConverter.ToInt32(bytes, 0) == ZIP_LEAD_BYTES;
-        }
+        private static bool IsZipCompressed(byte[] bytes) { return BitConverter.ToInt32(bytes, 0) == ZIP_LEAD_BYTES; }
 
-        private static bool IsGZipCompressed(byte[] bytes)
-        {
-            return BitConverter.ToUInt16(bytes, 0) == GZIP_LEAD_BYTES;
-        }
+        private static bool IsGZipCompressed(byte[] bytes) { return BitConverter.ToUInt16(bytes, 0) == GZIP_LEAD_BYTES; }
     }
 }

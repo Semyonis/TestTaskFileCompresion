@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 
@@ -19,6 +21,7 @@ namespace TestTaskFileCompression
 
         private string outputFilePath;
         private byte[] buffer;
+        private CompressionMode mode;
 
         private ScheduledWriter()
         {
@@ -35,32 +38,76 @@ namespace TestTaskFileCompression
             {
                 lock (instanceMutex)
                 {
-                    return instance ?? (instance = new ScheduledWriter());
+                    return instance ?? ( instance = new ScheduledWriter() );
                 }
             }
         }
 
-        public void StartWriter() { StartWriter(1000); }
+        public void SetNewResult(ZipResult result)
+        {
+            lock (queue)
+            {
+                queue.Add(result);
+            }
+        }
 
-        public void StartWriter(int millisecondsToSleep)
+        public void SetOutputFile(string outFile) { outputFilePath = outFile; }
+
+        public void SetIsStreamSliced() { isStreamSliceFinished = true; }
+
+        public void IncrementPartCount() { totalPartCount++; }
+
+        public void SetOperation(CompressionMode mode) { this.mode = mode; }
+
+        public void StartWorker()
+        {
+            try
+            {
+                StartWriterWorker(1000);
+            }
+            catch (Exception e)
+            {
+                var errorMessage = "Unhandled exception in writer worker: " + e.Message;
+                Console.WriteLine(e);
+            }
+        }
+
+        private void StartWriterWorker(int millisecondsToSleep)
         {
             var outFileStream = File.Create(outputFilePath);
 
             var wrotePartCount = 0;
             while (!isStreamSliceFinished && totalPartCount > 0 || wrotePartCount < totalPartCount)
             {
-                var isNextPartExist = queue
-                    .Any(item => item.PartIndex == wrotePartCount);
+                bool isNextPartExist;
+                var nextPart = new ZipResult(0,null);
+                lock (queue)
+                {
+
+                    isNextPartExist = queue
+                        .Any(item => item.PartIndex == wrotePartCount);
+
+                    if (isNextPartExist)
+                    {
+                        nextPart = queue
+                            .First(item => item.PartIndex == wrotePartCount);
+                    }
+                }
 
                 if (isNextPartExist)
                 {
-                    var nextPart = queue
-                        .First(item => item.PartIndex == wrotePartCount);
-                    
-                    buffer = new byte[nextPart.InputStream.Length];
-                    nextPart.InputStream.Seek(0, SeekOrigin.Begin);
-                    nextPart.InputStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
+                    if (mode == CompressionMode.Compress)
+                    {
+                        var bytes = BitConverter.GetBytes((int)nextPart.ResultStream.Length);
+                        outFileStream.Write(bytes, 0, 4);
+                    }
+
+                    nextPart.ResultStream.Seek(0, SeekOrigin.Begin);
+                    buffer = new byte[nextPart.ResultStream.Length];
+                    nextPart.ResultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
                     buffer = null;
+
+                    nextPart.ResultStream.Close();
 
                     wrotePartCount++;
                 }
@@ -72,13 +119,5 @@ namespace TestTaskFileCompression
 
             outFileStream.Close();
         }
-
-        public void SetNewResult(ZipResult result) { queue.Add(result); }
-
-        public void SetOutputFile(string outFile) { outputFilePath = outFile; }
-
-        public void SetIsStreamSliced() { isStreamSliceFinished = true; }
-
-        public void IncrementPartCount() { totalPartCount++; }
     }
 }

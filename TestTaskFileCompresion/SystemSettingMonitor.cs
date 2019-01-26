@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace TestTaskFileCompression
 {
-    public class SystemSettingMonitor
+    public sealed class SystemSettingMonitor
     {
         private static SystemSettingMonitor instance;
 
