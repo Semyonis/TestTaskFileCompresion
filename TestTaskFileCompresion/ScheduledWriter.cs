@@ -9,6 +9,8 @@ namespace TestTaskFileCompression
 {
     public sealed class ScheduledWriter
     {
+        public Action Clear;
+
         private static volatile object instanceMutex = new object();
 
         private static ScheduledWriter instance;
@@ -130,7 +132,7 @@ namespace TestTaskFileCompression
 
             outFileStream.Close();
 
-            SystemSettingMonitor.Instance.Clear();
+            Clear();
         }
     }
 }

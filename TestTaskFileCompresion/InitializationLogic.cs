@@ -39,6 +39,8 @@ namespace TestTaskFileCompression
         {
             ScheduledWriter.Instance.Initialize(operationType, outputFilePath);
 
+            ScheduledWriter.Instance.Clear = SystemSettingMonitor.Instance.Clear;
+
             new Thread(ScheduledWriter.Instance.StartWorker).Start();
         }
     }
