@@ -40,19 +40,23 @@
     <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CompressionParameters.cs" />
-    <Compile Include="DecompressionParameters.cs" />
-    <Compile Include="MultithreadDecompressLogic.cs" />
-    <Compile Include="MultithreadCompressLogic.cs" />
-    <Compile Include="ScheduledWriter.cs" />
-    <Compile Include="StreamExtensions.cs" />
-    <Compile Include="MultithreadOperationLogic.cs" />
-    <Compile Include="OperationParameters.cs" />
+    <Compile Include="Common\AppConstants.cs" />
+    <Compile Include="Readers\CompressionReader.cs" />
+    <Compile Include="Writers\DecompressWriterLogic.cs" />
+    <Compile Include="Readers\DecompressionReader.cs" />
+    <Compile Include="Readers\DecompressReadersLogic.cs" />
+    <Compile Include="Readers\CompressReadersLogic.cs" />
+    <Compile Include="Writers\CompressWriterLogic.cs" />
+    <Compile Include="Instances\StreamResultQueue.cs" />
+    <Compile Include="Writers\BaseWriterLogic.cs" />
+    <Compile Include="Common\StreamExtensions.cs" />
+    <Compile Include="Readers\BaseReadersLogic.cs" />
+    <Compile Include="Readers\BaseReader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SystemSettingMonitor.cs" />
+    <Compile Include="Instances\SystemSettingMonitor.cs" />
     <Compile Include="InitializationLogic.cs" />
-    <Compile Include="ZipResult.cs" />
+    <Compile Include="Common\StreamResult.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

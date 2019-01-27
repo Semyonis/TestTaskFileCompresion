@@ -2,14 +2,16 @@
 using System.IO;
 using System.Threading;
 
-namespace TestTaskFileCompression
+using TestTaskFileCompression.Common;
+
+namespace TestTaskFileCompression.Readers
 {
-    public abstract class MultithreadOperationLogic
+    public abstract class BaseReadersLogic
     {
         public Action SetIsStreamSliced;
         public Action IncrementPartCount;
 
-        public Action<ZipResult> SetNewResult;
+        public Action<StreamResult> Put;
 
         public Func<int, Stream> GetNewStream;
         public Func<int> GetProcessorCount;
@@ -18,10 +20,9 @@ namespace TestTaskFileCompression
 
         protected readonly Stream inFileStream;
 
-        protected MultithreadOperationLogic(string inputFilePath)
+        protected BaseReadersLogic(string inputFilePath)
         {
             inFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-
         }
 
         public void Call()
@@ -41,6 +42,7 @@ namespace TestTaskFileCompression
                     SetIsStreamSliced();
 
                     inFileStream.Close();
+
                     return;
                 }
 
@@ -66,19 +68,19 @@ namespace TestTaskFileCompression
             
             var parameters = GetOperationParameters(inPartStream, outPartStream, partIndex);
 
-            parameters.SetNewResult = SetNewResult;
+            parameters.SetNewResult = Put;
             
             StartThreadWorker(parameters);
 
             return readCount;
         }
 
-        private static void StartThreadWorker(OperationParameters parameters)
+        private static void StartThreadWorker(BaseReader parameters)
         {
             new Thread(parameters.StartWorker).Start();
         }
 
-        protected abstract OperationParameters GetOperationParameters(
+        protected abstract BaseReader GetOperationParameters(
             Stream inPartStream,
             Stream outPartStream,
             int partIndex);

@@ -1,10 +1,12 @@
 ﻿using System.IO;
 
-namespace TestTaskFileCompression
+using TestTaskFileCompression.Common;
+
+namespace TestTaskFileCompression.Readers
 {
-    public sealed class CompressionParameters : OperationParameters
+    public sealed class CompressionReader : BaseReader
     {
-        public CompressionParameters(Stream inStream, Stream outStream, int partIndex)
+        public CompressionReader(Stream inStream, Stream outStream, int partIndex)
             : base(inStream, outStream, partIndex) { }
 
         protected override void StartOperation() { Compress(); }

@@ -1,5 +1,8 @@
 ﻿using System.IO.Compression;
-using System.Threading;
+
+using TestTaskFileCompression.Instances;
+using TestTaskFileCompression.Readers;
+using TestTaskFileCompression.Writers;
 
 namespace TestTaskFileCompression
 {
@@ -14,34 +17,57 @@ namespace TestTaskFileCompression
 
         private static void ReadersInitialization(CompressionMode operationType, string inputFilePath)
         {
-            MultithreadOperationLogic logic;
+            BaseReadersLogic logic;
             if (operationType == CompressionMode.Compress)
             {
-                logic = new MultithreadCompressLogic(inputFilePath);
+                logic = new CompressReadersLogic(inputFilePath);
             }
             else
             {
-                logic = new MultithreadDecompressLogic(inputFilePath);
+                logic = new DecompressReadersLogic(inputFilePath);
             }
 
-            logic.SetIsStreamSliced = ScheduledWriter.Instance.SetIsStreamSliced;
-            logic.IncrementPartCount = ScheduledWriter.Instance.IncrementPartCount;
-
-            logic.SetNewResult = ScheduledWriter.Instance.SetNewResult;
-
-            logic.GetProcessorCount = SystemSettingMonitor.Instance.GetProcessorCount;
-            logic.GetNewStream = SystemSettingMonitor.Instance.GetNewStream;
+            IntegrateReadersDependencies(logic);
 
             logic.Call();
         }
 
         private static void WriterInitialization(CompressionMode operationType, string outputFilePath)
         {
-            ScheduledWriter.Instance.Initialize(operationType, outputFilePath);
+            BaseWriterLogic logic;
+            if (operationType == CompressionMode.Compress)
+            {
+                logic = new CompressWriterLogic(outputFilePath);
+            }
+            else
+            {
+                logic = new DecompressWriterLogic(outputFilePath);
+            }
 
-            ScheduledWriter.Instance.Clear = SystemSettingMonitor.Instance.Clear;
+            IntegrateWriterDependencies(logic);
 
-            new Thread(ScheduledWriter.Instance.StartWorker).Start();
+            logic.Call();
+        }
+
+        private static void IntegrateReadersDependencies(BaseReadersLogic logic)
+        {
+            logic.SetIsStreamSliced = StreamResultQueue.Instance.SetIsStreamSliced;
+            logic.IncrementPartCount = StreamResultQueue.Instance.IncrementPartCount;
+
+            logic.Put = StreamResultQueue.Instance.Put;
+
+            logic.GetProcessorCount = SystemSettingMonitor.Instance.GetProcessorCount;
+            logic.GetNewStream = SystemSettingMonitor.Instance.GetNewStream;
+        }
+
+        private static void IntegrateWriterDependencies(BaseWriterLogic logic)
+        {
+            logic.Clear = SystemSettingMonitor.Instance.Clear;
+
+            logic.Remove = StreamResultQueue.Instance.Remove;
+
+            logic.GetQueue = StreamResultQueue.Instance.GetQueue;
+            logic.IsNotEnded = StreamResultQueue.Instance.IsNotEnded;
         }
     }
 }

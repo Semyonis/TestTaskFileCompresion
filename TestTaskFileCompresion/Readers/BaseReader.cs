@@ -1,18 +1,20 @@
 ﻿using System;
 using System.IO;
 
-namespace TestTaskFileCompression
+using TestTaskFileCompression.Common;
+
+namespace TestTaskFileCompression.Readers
 {
-    public abstract class OperationParameters
+    public abstract class BaseReader
     {
-        public Action<ZipResult> SetNewResult;
+        public Action<StreamResult> SetNewResult;
 
         private readonly int partIndex;
 
         protected readonly Stream inStream;
         protected readonly Stream outStream;
 
-        protected OperationParameters(Stream inStream, Stream outStream, int partIndex)
+        protected BaseReader(Stream inStream, Stream outStream, int partIndex)
         {
             this.inStream = inStream;
             this.outStream = outStream;
@@ -28,12 +30,16 @@ namespace TestTaskFileCompression
 
                 inStream.Close();
 
-                SetNewResult(new ZipResult(partIndex, outStream));
+                SetNewResult(new StreamResult(partIndex, outStream));
             }
             catch (Exception e)
             {
                 var errorMessage = "Exception in operation worker: " + e.Message;
                 Console.WriteLine(errorMessage);
+            }
+            finally
+            {
+                //TODO: try again
             }
         }
 

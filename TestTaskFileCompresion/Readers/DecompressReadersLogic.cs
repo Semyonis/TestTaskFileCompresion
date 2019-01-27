@@ -1,21 +1,21 @@
 ﻿using System;
 using System.IO;
 
-namespace TestTaskFileCompression
+namespace TestTaskFileCompression.Readers
 {
-    public sealed class MultithreadDecompressLogic : MultithreadOperationLogic
+    public sealed class DecompressReadersLogic : BaseReadersLogic
     {
-        public MultithreadDecompressLogic(string inputFilePath)
+        public DecompressReadersLogic(string inputFilePath)
             : base(inputFilePath)
         {
             SeekStart(inFileStream);
         }
 
-        protected override OperationParameters GetOperationParameters(Stream inPartStream,
+        protected override BaseReader GetOperationParameters(Stream inPartStream,
             Stream outPartStream,
             int partIndex)
         {
-            return new DecompressionParameters(inPartStream, outPartStream, partIndex);
+            return new DecompressionReader(inPartStream, outPartStream, partIndex);
         }
 
         protected override int GetReadLength()

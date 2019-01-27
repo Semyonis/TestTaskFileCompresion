@@ -4,9 +4,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
+using TestTaskFileCompression.Common;
+
 namespace TestTaskFileCompression
 {
-    class Program
+    static class Program
     {
         private const string COMPRESS_OPERATION = "COMPRESS";
         private const string DECOMPRESS_OPERATION = "DECOMPRESS";
@@ -49,10 +51,10 @@ namespace TestTaskFileCompression
                 throw new ArgumentException("Specified as output directory is not existed");
             }
 
-            //if (File.Exists(outputFilePath))
-            //{
-            //    throw new ArgumentException("Specified as output file is already existed");
-            //}
+            if (File.Exists(outputFilePath))
+            {
+                throw new ArgumentException("Specified as output file is already existed");
+            }
 
             var destinationDrive = DriveInfo.GetDrives()
                 .Single(drive => drive.RootDirectory.Name == Path.GetPathRoot(outputFilePath));

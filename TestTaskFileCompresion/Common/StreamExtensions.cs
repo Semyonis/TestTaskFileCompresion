@@ -2,7 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace TestTaskFileCompression
+namespace TestTaskFileCompression.Common
 {
     public static class StreamExtensions
     {
@@ -54,6 +54,6 @@ namespace TestTaskFileCompression
         }
 
 
-        private static bool IsCustomGZipCompressed(byte[] bytes) { return BitConverter.ToUInt16(bytes, 0) == 666; }
+        private static bool IsCustomGZipCompressed(byte[] bytes) { return BitConverter.ToUInt16(bytes, 0) == AppConstants.FORMAT_START_CHARS; }
     }
 }

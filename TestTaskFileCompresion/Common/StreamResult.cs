@@ -1,10 +1,10 @@
 ﻿using System.IO;
 
-namespace TestTaskFileCompression
+namespace TestTaskFileCompression.Common
 {
-    public sealed class ZipResult
+    public sealed class StreamResult
     {
-        public ZipResult(int partIndex, Stream outStream)
+        public StreamResult(int partIndex, Stream outStream)
         {
             PartIndex = partIndex;
             ResultStream = outStream;
