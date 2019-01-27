@@ -1,11 +1,20 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading;
 
 namespace TestTaskFileCompression
 {
     public abstract class MultithreadOperationLogic
     {
-        private readonly Semaphore semaphore;
+        public Action SetIsStreamSliced;
+        public Action IncrementPartCount;
+
+        public Action<ZipResult> SetNewResult;
+
+        public Func<int, Stream> GetNewStream;
+        public Func<int> GetProcessorCount;
+
+        private Semaphore semaphore;
 
         protected readonly Stream inFileStream;
 
@@ -13,12 +22,13 @@ namespace TestTaskFileCompression
         {
             inFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-            var procCount = SystemSettingMonitor.Instance.ProcessorCount;
-            semaphore = new Semaphore(procCount, procCount);
         }
 
         public void Call()
         {
+            var procCount = GetProcessorCount();
+            semaphore = new Semaphore(procCount, procCount);
+
             var partIndex = 0;
 
             while (true)
@@ -28,7 +38,7 @@ namespace TestTaskFileCompression
                 var readCount = ReadInputAndOperate(inFileStream, partIndex);
                 if (readCount == 0)
                 {
-                    ScheduledWriter.Instance.SetIsStreamSliced();
+                    SetIsStreamSliced();
 
                     inFileStream.Close();
                     return;
@@ -36,26 +46,28 @@ namespace TestTaskFileCompression
 
                 partIndex++;
 
-                ScheduledWriter.Instance.IncrementPartCount();
+                IncrementPartCount();
 
                 semaphore.Release();
             }
         }
 
-        private int ReadInputAndOperate(Stream inFileStream, int partIndex)
+        private int ReadInputAndOperate(Stream inStream, int partIndex)
         {
-            var inPartStream = new MemoryStream();
-
             var length = GetReadLength();
             var buffer = new byte[length];
-            var readCount = inFileStream.CopyTo(inPartStream, buffer, 0, length);
+
+            var inPartStream = GetNewStream(length);
+            var outPartStream = GetNewStream(length);
+            
+            var readCount = inStream.CopyTo(inPartStream, buffer, 0, length);
 
             inPartStream.Seek(0, SeekOrigin.Begin);
-
-            var outPartStream = new MemoryStream();
-
+            
             var parameters = GetOperationParameters(inPartStream, outPartStream, partIndex);
 
+            parameters.SetNewResult = SetNewResult;
+            
             StartThreadWorker(parameters);
 
             return readCount;
@@ -63,9 +75,7 @@ namespace TestTaskFileCompression
 
         private static void StartThreadWorker(OperationParameters parameters)
         {
-            var thread = new Thread(parameters.StartWorker);
-            thread.Start();
-            thread.Join();
+            new Thread(parameters.StartWorker).Start();
         }
 
         protected abstract OperationParameters GetOperationParameters(

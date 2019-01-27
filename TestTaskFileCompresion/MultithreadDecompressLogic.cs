@@ -8,7 +8,7 @@ namespace TestTaskFileCompression
         public MultithreadDecompressLogic(string inputFilePath)
             : base(inputFilePath)
         {
-            Seek(inFileStream);
+            SeekStart(inFileStream);
         }
 
         protected override OperationParameters GetOperationParameters(Stream inPartStream,
@@ -25,6 +25,6 @@ namespace TestTaskFileCompression
             return BitConverter.ToInt32(array, 0);
         }
 
-        private static void Seek(Stream inFileStream) { inFileStream.Seek(4, SeekOrigin.Begin); }
+        private static void SeekStart(Stream inFileStream) { inFileStream.Seek(4, SeekOrigin.Begin); }
     }
 }

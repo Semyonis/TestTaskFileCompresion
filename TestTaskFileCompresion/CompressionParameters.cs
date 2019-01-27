@@ -9,6 +9,10 @@ namespace TestTaskFileCompression
 
         protected override void StartOperation() { Compress(); }
 
-        private void Compress() { inStream.CompressToStream(outStream, buffer, 0, buffer.Length); }
+        private void Compress()
+        {
+            var buffer = new byte[inStream.Length];
+            inStream.CompressToStream(outStream, buffer, 0, buffer.Length);
+        }
     }
 }

@@ -5,12 +5,12 @@ namespace TestTaskFileCompression
 {
     public abstract class OperationParameters
     {
+        public Action<ZipResult> SetNewResult;
+
         private readonly int partIndex;
 
         protected readonly Stream inStream;
         protected readonly Stream outStream;
-
-        protected readonly byte[] buffer;
 
         protected OperationParameters(Stream inStream, Stream outStream, int partIndex)
         {
@@ -18,8 +18,6 @@ namespace TestTaskFileCompression
             this.outStream = outStream;
 
             this.partIndex = partIndex;
-
-            buffer = new byte[inStream.Length];
         }
 
         public void StartWorker()
@@ -27,7 +25,10 @@ namespace TestTaskFileCompression
             try
             {
                 StartOperation();
-                ScheduledWriter.Instance.SetNewResult(new ZipResult(partIndex, outStream));
+
+                inStream.Close();
+
+                SetNewResult(new ZipResult(partIndex, outStream));
             }
             catch (Exception e)
             {

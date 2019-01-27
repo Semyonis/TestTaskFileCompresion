@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 
 namespace TestTaskFileCompression
 {
@@ -78,28 +77,7 @@ namespace TestTaskFileCompression
 
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
-            Initialization(operationType, inputFilePath, outputFilePath);
-        }
-
-        private static void Initialization(CompressionMode operationType, string inputFilePath, string outputFilePath)
-        {
-            ScheduledWriter.Instance.SetOutputFile(outputFilePath);
-            ScheduledWriter.Instance.SetOperation(operationType);
-
-            MultithreadOperationLogic logic;
-            if (operationType == CompressionMode.Compress)
-            {
-                logic = new MultithreadCompressLogic(inputFilePath);
-            }
-            else
-            {
-                logic = new MultithreadDecompressLogic(inputFilePath);
-            }
-            logic.Call();
-
-            var writerThread = new Thread(ScheduledWriter.Instance.StartWorker);
-            writerThread.Start();
-            writerThread.Join();
+            InitializationLogic.InitializeWorkers(operationType, inputFilePath, outputFilePath);
         }
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)

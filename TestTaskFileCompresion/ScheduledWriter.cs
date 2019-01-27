@@ -37,9 +37,15 @@ namespace TestTaskFileCompression
             {
                 lock (instanceMutex)
                 {
-                    return instance ?? ( instance = new ScheduledWriter() );
+                    return instance ?? (instance = new ScheduledWriter());
                 }
             }
+        }
+
+        public void Initialize(CompressionMode operationType, string outputFilePath)
+        {
+            mode = operationType;
+            this.outputFilePath = outputFilePath;
         }
 
         public void SetNewResult(ZipResult result)
@@ -50,13 +56,9 @@ namespace TestTaskFileCompression
             }
         }
 
-        public void SetOutputFile(string outFile) { outputFilePath = outFile; }
-
         public void SetIsStreamSliced() { isStreamSliceFinished = true; }
 
         public void IncrementPartCount() { totalPartCount++; }
-
-        public void SetOperation(CompressionMode mode) { this.mode = mode; }
 
         public void StartWorker()
         {
@@ -76,18 +78,17 @@ namespace TestTaskFileCompression
             var outFileStream = File.Create(outputFilePath);
             if (mode == CompressionMode.Compress)
             {
-                var bytes = BitConverter.GetBytes((int)666);
+                var bytes = BitConverter.GetBytes((int) 666);
                 outFileStream.Write(bytes, 0, 4);
             }
 
             var wrotePartCount = 0;
-            while (!isStreamSliceFinished && totalPartCount > 0 || wrotePartCount < totalPartCount)
+            while (wrotePartCount < totalPartCount || !isStreamSliceFinished)
             {
                 bool isNextPartExist;
-                var nextPart = new ZipResult(0,null);
+                var nextPart = new ZipResult(0, null);
                 lock (queue)
                 {
-
                     isNextPartExist = queue
                         .Any(item => item.PartIndex == wrotePartCount);
 
@@ -100,16 +101,19 @@ namespace TestTaskFileCompression
 
                 if (isNextPartExist)
                 {
+                    var resultStream = nextPart.ResultStream;
+
                     if (mode == CompressionMode.Compress)
                     {
-                        var bytes = BitConverter.GetBytes((int)nextPart.ResultStream.Length);
+                        var bytes = BitConverter.GetBytes((int) resultStream.Length);
                         outFileStream.Write(bytes, 0, 4);
                     }
 
-                    nextPart.ResultStream.Seek(0, SeekOrigin.Begin);
-                    var buffer = new byte[nextPart.ResultStream.Length];
-                    nextPart.ResultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
-                    nextPart.ResultStream.Close();
+                    resultStream.Seek(0, SeekOrigin.Begin);
+                    var buffer = new byte[resultStream.Length];
+                    resultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
+
+                    resultStream.Close();
 
                     lock (queue)
                     {
@@ -125,6 +129,8 @@ namespace TestTaskFileCompression
             }
 
             outFileStream.Close();
+
+            SystemSettingMonitor.Instance.Clear();
         }
     }
 }

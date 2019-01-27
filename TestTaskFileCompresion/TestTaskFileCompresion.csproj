@@ -51,6 +51,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SystemSettingMonitor.cs" />
+    <Compile Include="InitializationLogic.cs" />
     <Compile Include="ZipResult.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace TestTaskFileCompression
 {
@@ -12,12 +13,18 @@ namespace TestTaskFileCompression
         private readonly PerformanceCounter cpuUsage;
         private readonly PerformanceCounter memUsage;
 
+        private readonly string tempDirectoryPath;
+        private readonly int processorCount;
+
         private SystemSettingMonitor()
         {
             cpuUsage = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             memUsage = new PerformanceCounter("Memory", "Available MBytes");
 
-            ProcessorCount = Environment.ProcessorCount;
+            processorCount = Environment.ProcessorCount;
+
+            tempDirectoryPath = Path.GetTempPath();
+            Directory.CreateDirectory(tempDirectoryPath);
         }
 
         public static SystemSettingMonitor Instance
@@ -31,7 +38,10 @@ namespace TestTaskFileCompression
             }
         }
 
-        public int ProcessorCount { get; private set; }
+        public int GetProcessorCount()
+        { 
+            return processorCount;
+        }
 
         public double CpuUsage
         {
@@ -41,6 +51,30 @@ namespace TestTaskFileCompression
         public double MemUsage
         {
             get { return memUsage.NextValue(); }
+        }
+
+        public Stream GetNewStream(int length)
+        {
+            var nextValue = MemUsage;
+            if (length < nextValue * 100000)
+            {
+                return new MemoryStream();
+            }
+            else
+            {
+                var randomFileName = Path.GetRandomFileName();
+                while(File.Exists(Path.Combine(tempDirectoryPath, randomFileName)))
+                {
+                    randomFileName = Path.GetRandomFileName();
+                }
+                
+                return new FileStream(randomFileName, FileMode.CreateNew);
+            }
+        }
+
+        public void Clear()
+        {
+            Directory.Delete(tempDirectoryPath, true);
         }
     }
 }
