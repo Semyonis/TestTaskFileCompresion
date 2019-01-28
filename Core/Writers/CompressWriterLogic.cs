@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 
-using TestTaskFileCompression.Common;
+using Core.Common;
 
-namespace TestTaskFileCompression.Writers
+namespace Core.Writers
 {
     public sealed class CompressWriterLogic : BaseWriterLogic
     {

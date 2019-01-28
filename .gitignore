@@ -2,3 +2,5 @@
 .vs/TestTaskFileCompresion/v15
 TestTaskFileCompresion/obj
 TestTaskFileCompresion/bin
+Core/obj
+Core/bin

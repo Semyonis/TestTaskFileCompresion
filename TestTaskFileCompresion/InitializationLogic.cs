@@ -1,8 +1,9 @@
-﻿using System.IO.Compression;
+﻿using System;
+using System.IO.Compression;
 
-using TestTaskFileCompression.Instances;
-using TestTaskFileCompression.Readers;
-using TestTaskFileCompression.Writers;
+using Core.Instances;
+using Core.Readers;
+using Core.Writers;
 
 namespace TestTaskFileCompression
 {
@@ -10,12 +11,22 @@ namespace TestTaskFileCompression
     {
         public static void InitializeWorkers(CompressionMode operationType, string inputFilePath, string outputFilePath)
         {
-            WriterInitialization(operationType, outputFilePath);
+            var queue = new StreamResultQueue();
 
-            ReadersInitialization(operationType, inputFilePath);
+            WriterInitialization(operationType, outputFilePath, queue);
+
+            ReadersInitialization(operationType, inputFilePath, queue);
+
+            IntegrateStaticClassesDependencies();
         }
 
-        private static void ReadersInitialization(CompressionMode operationType, string inputFilePath)
+        public static void HandleException(Exception e, string info)
+        {
+            //TODO: logging
+            Console.WriteLine(info);
+        }
+        
+        private static void ReadersInitialization(CompressionMode operationType, string inputFilePath, StreamResultQueue queue)
         {
             BaseReadersLogic logic;
             if (operationType == CompressionMode.Compress)
@@ -27,12 +38,12 @@ namespace TestTaskFileCompression
                 logic = new DecompressReadersLogic(inputFilePath);
             }
 
-            IntegrateReadersDependencies(logic);
+            IntegrateReadersDependencies(logic, queue);
 
             logic.Call();
         }
 
-        private static void WriterInitialization(CompressionMode operationType, string outputFilePath)
+        private static void WriterInitialization(CompressionMode operationType, string outputFilePath, StreamResultQueue queue)
         {
             BaseWriterLogic logic;
             if (operationType == CompressionMode.Compress)
@@ -44,30 +55,37 @@ namespace TestTaskFileCompression
                 logic = new DecompressWriterLogic(outputFilePath);
             }
 
-            IntegrateWriterDependencies(logic);
+            IntegrateWriterDependencies(logic, queue);
 
             logic.Call();
         }
 
-        private static void IntegrateReadersDependencies(BaseReadersLogic logic)
+        private static void IntegrateReadersDependencies(BaseReadersLogic logic, StreamResultQueue queue)
         {
-            logic.SetIsStreamSliced = StreamResultQueue.Instance.SetIsStreamSliced;
-            logic.IncrementPartCount = StreamResultQueue.Instance.IncrementPartCount;
+            logic.HandleException = HandleException;
+            logic.SetInputStreamIsSliced = queue.SetInputStreamIsSliced;
+            logic.IncrementPartCount = queue.IncrementPartCount;
 
-            logic.Put = StreamResultQueue.Instance.Put;
+            logic.Put = queue.Put;
 
             logic.GetProcessorCount = SystemSettingMonitor.Instance.GetProcessorCount;
             logic.GetNewStream = SystemSettingMonitor.Instance.GetNewStream;
         }
 
-        private static void IntegrateWriterDependencies(BaseWriterLogic logic)
+        private static void IntegrateWriterDependencies(BaseWriterLogic logic, StreamResultQueue queue)
         {
+            logic.HandleException = HandleException;
             logic.Clear = SystemSettingMonitor.Instance.Clear;
 
-            logic.Remove = StreamResultQueue.Instance.Remove;
+            logic.Remove = queue.Remove;
 
-            logic.GetQueue = StreamResultQueue.Instance.GetQueue;
-            logic.IsNotEnded = StreamResultQueue.Instance.IsNotEnded;
+            logic.GetPartById = queue.GetPartById;
+            logic.IsNotEnded = queue.IsNotEnded;
+        }
+
+        private static void IntegrateStaticClassesDependencies()
+        {
+            SystemSettingMonitor.Instance.HandleException = HandleException;
         }
     }
 }

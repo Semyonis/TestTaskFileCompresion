@@ -5,12 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
-using TestTaskFileCompression.Common;
+using Core.Common;
 
-namespace TestTaskFileCompression.Instances
+namespace Core.Instances
 {
     public sealed class SystemSettingMonitor
     {
+        public Action<Exception, string> HandleException;
+
         private static volatile object mutex = new object();
 
         private static SystemSettingMonitor instance;
@@ -69,20 +71,18 @@ namespace TestTaskFileCompression.Instances
                 }
 
                 var isAppDirectory = false;
-                var tempDirectoryPath = Path.GetTempPath();
-                var directoryRoot = Directory.GetDirectoryRoot(tempDirectoryPath);
-                var driveInfo = DriveInfo.GetDrives().First(drive => drive.RootDirectory.Name == directoryRoot);
-                if (driveInfo.AvailableFreeSpace < length)
+                var directoryPath = Path.GetTempPath();
+                var tempDriveInfo = GetDriveInfo(directoryPath);
+                if (tempDriveInfo.AvailableFreeSpace < length)
                 {
-                    tempDirectoryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp");
-                    directoryRoot = Directory.GetDirectoryRoot(tempDirectoryPath);
-                    driveInfo = DriveInfo.GetDrives().First(drive => drive.RootDirectory.Name == directoryRoot);
-                    if (driveInfo.AvailableFreeSpace > length)
+                    directoryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp");
+                    var currentDriveInfo = GetDriveInfo(directoryPath);
+                    if (currentDriveInfo.AvailableFreeSpace > length)
                     {
                         isAppDirectory = true;
-                        if (!Directory.Exists(tempDirectoryPath))
+                        if (!Directory.Exists(directoryPath))
                         {
-                            Directory.CreateDirectory(tempDirectoryPath);
+                            Directory.CreateDirectory(directoryPath);
                         }
                     }
                     else
@@ -92,20 +92,38 @@ namespace TestTaskFileCompression.Instances
                     }
                 }
 
-                var randomFileName = Path.GetRandomFileName();
-                while (File.Exists(Path.Combine(tempDirectoryPath, randomFileName)))
-                {
-                    randomFileName = Path.GetRandomFileName();
-                }
+                var randomFileName = GetTempFileName(directoryPath);
 
-                var newFile = Path.Combine(tempDirectoryPath, randomFileName);
                 if (isAppDirectory)
                 {
-                    tempFileList.Add(newFile);
+                    tempFileList.Add(randomFileName);
                 }
 
-                return new FileStream(newFile, FileMode.CreateNew, FileAccess.ReadWrite);
+                return new FileStream(randomFileName, FileMode.CreateNew, FileAccess.ReadWrite);
             }
+        }
+
+        private static DriveInfo GetDriveInfo(string tempDirectoryPath)
+        {
+            var directoryRoot = Directory.GetDirectoryRoot(tempDirectoryPath);
+            return DriveInfo.GetDrives().First(drive => drive.RootDirectory.Name == directoryRoot);
+        }
+
+        private static string GetTempFileName(string tempDirectoryPath)
+        {
+            var randomFileName = GetFileNameInTempDirectory(tempDirectoryPath);
+
+            while (File.Exists(randomFileName))
+            {
+                randomFileName = GetFileNameInTempDirectory(tempDirectoryPath);
+            }
+
+            return randomFileName;
+        }
+
+        private static string GetFileNameInTempDirectory(string tempDirectoryPath)
+        {
+            return Path.Combine(tempDirectoryPath, Path.GetRandomFileName());
         }
 
         public void Clear()
@@ -123,8 +141,13 @@ namespace TestTaskFileCompression.Instances
                 }
                 catch (Exception e)
                 {
-                    var message = "Cannot delete file. " + e.Message;
-                    Console.WriteLine(message);
+                    var errorMessage = "Cannot delete file. " + e.Message;
+
+                    var handle = HandleException;
+                    if (handle != null)
+                    {
+                        handle(e, errorMessage);
+                    }
                 }
             }
         }

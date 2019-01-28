@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace TestTaskFileCompression.Common
+namespace Core.Common
 {
     public sealed class StreamResult
     {

@@ -2,7 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace TestTaskFileCompression.Common
+namespace Core.Common
 {
     public static class StreamExtensions
     {
@@ -38,7 +38,7 @@ namespace TestTaskFileCompression.Common
         {
             var readCount = fromStream.Read(buffer, offset, length);
 
-            toStream.Write(buffer, offset, length);
+            toStream.Write(buffer, offset, readCount);
 
             return readCount;
         }

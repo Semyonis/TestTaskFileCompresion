@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace TestTaskFileCompression.Writers
+namespace Core.Writers
 {
     public sealed class DecompressWriterLogic : BaseWriterLogic
     {

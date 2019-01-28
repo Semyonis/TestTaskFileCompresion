@@ -4,7 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-using TestTaskFileCompression.Common;
+using Core.Common;
 
 namespace TestTaskFileCompression
 {
@@ -84,8 +84,9 @@ namespace TestTaskFileCompression
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            var errorText = e.ExceptionObject.ToString();
-            Console.WriteLine(errorText);
+            var message = e.ExceptionObject.ToString();
+
+            InitializationLogic.HandleException((Exception) e.ExceptionObject, message);
         }
     }
 }

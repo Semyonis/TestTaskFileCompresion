@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-using TestTaskFileCompression.Common;
+using Core.Common;
 
-namespace TestTaskFileCompression.Readers
+namespace Core.Readers
 {
     public sealed class CompressionReader : BaseReader
     {

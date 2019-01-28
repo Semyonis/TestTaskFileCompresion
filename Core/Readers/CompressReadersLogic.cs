@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-using TestTaskFileCompression.Common;
+using Core.Common;
 
-namespace TestTaskFileCompression.Readers
+namespace Core.Readers
 {
     public sealed class CompressReadersLogic : BaseReadersLogic
     {
@@ -15,6 +15,6 @@ namespace TestTaskFileCompression.Readers
             return new CompressionReader(inPartStream, outPartStream, partIndex);
         }
 
-        protected override int GetReadLength() { return AppConstants.BYTE_IN_MEGABYTE; }
+        protected override int GetReadLength() { return AppConstants.COMPRESS_READ_LENGTH; }
     }
 }

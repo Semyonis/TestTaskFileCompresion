@@ -1,13 +1,15 @@
 ﻿using System;
 using System.IO;
 
-using TestTaskFileCompression.Common;
+using Core.Common;
 
-namespace TestTaskFileCompression.Readers
+namespace Core.Readers
 {
     public abstract class BaseReader
     {
-        public Action<StreamResult> SetNewResult;
+        public Action<Exception, string> HandleException;
+
+        public Action<StreamResult> PutInQueue;
 
         private readonly int partIndex;
 
@@ -30,16 +32,25 @@ namespace TestTaskFileCompression.Readers
 
                 inStream.Close();
 
-                SetNewResult(new StreamResult(partIndex, outStream));
+                var put = PutInQueue;
+                if (put != null)
+                {
+                    put(new StreamResult(partIndex, outStream));
+                }
             }
             catch (Exception e)
             {
                 var errorMessage = "Exception in operation worker: " + e.Message;
-                Console.WriteLine(errorMessage);
+
+                var handle = HandleException;
+                if (handle != null)
+                {
+                    handle(e, errorMessage);
+                }
             }
             finally
             {
-                //TODO: try again
+                //TODO: try read again
             }
         }
 
