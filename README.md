@@ -4,6 +4,7 @@ Compression big file with gZip library and .net 3.5 Task
 Simple file compress/decompress multithreaded algorithm based on  threads and GZipStream (.net 3.5 only)
 
 Problems:
+
 1)InitializationLogic. Внедрить нормальную Dep Inj.
 
 2)BaseWriterLogic. Декомпозировать глубже. По примеру BaseReadersLogic.
