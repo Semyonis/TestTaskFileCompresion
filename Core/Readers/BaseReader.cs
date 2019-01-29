@@ -48,10 +48,6 @@ namespace Core.Readers
                     handle(e, errorMessage);
                 }
             }
-            finally
-            {
-                //TODO: try read again
-            }
         }
 
         protected abstract void StartOperation();

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 
 using Core.Common;
+using Core.Tokens;
 
 namespace Core.Instances
 {
@@ -20,8 +21,11 @@ namespace Core.Instances
         private readonly PerformanceCounter cpuUsage;
         private readonly PerformanceCounter memUsage;
 
+        private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
         private readonly List<string> tempFileList = new List<string>();
         private readonly int processorCount;
+        private readonly string errorLogFile;
+
 
         private SystemSettingMonitor()
         {
@@ -29,6 +33,8 @@ namespace Core.Instances
             memUsage = new PerformanceCounter("Memory", "Available MBytes");
 
             processorCount = Environment.ProcessorCount;
+
+            errorLogFile = "errorLog.txt";
         }
 
         public static SystemSettingMonitor Instance
@@ -53,6 +59,11 @@ namespace Core.Instances
         }
 
         public int GetProcessorCount() { return processorCount; }
+
+        public CancellationToken Token
+        {
+            get { return cancelTokenSource.Token; }
+        }
 
         public Stream GetNewStream(int length)
         {
@@ -103,27 +114,10 @@ namespace Core.Instances
             }
         }
 
-        private static DriveInfo GetDriveInfo(string tempDirectoryPath)
+        public void Cancel()
         {
-            var directoryRoot = Directory.GetDirectoryRoot(tempDirectoryPath);
-            return DriveInfo.GetDrives().First(drive => drive.RootDirectory.Name == directoryRoot);
-        }
-
-        private static string GetTempFileName(string tempDirectoryPath)
-        {
-            var randomFileName = GetFileNameInTempDirectory(tempDirectoryPath);
-
-            while (File.Exists(randomFileName))
-            {
-                randomFileName = GetFileNameInTempDirectory(tempDirectoryPath);
-            }
-
-            return randomFileName;
-        }
-
-        private static string GetFileNameInTempDirectory(string tempDirectoryPath)
-        {
-            return Path.Combine(tempDirectoryPath, Path.GetRandomFileName());
+            cancelTokenSource.Cancel();
+            Clear();
         }
 
         public void Clear()
@@ -150,6 +144,39 @@ namespace Core.Instances
                     }
                 }
             }
+        }
+
+        public void LogError(string errorMessage)
+        {
+            if (!File.Exists(errorLogFile))
+            {
+                File.Create(errorLogFile);
+            }
+
+            File.WriteAllText(errorLogFile, errorMessage);
+        }
+
+        private static DriveInfo GetDriveInfo(string tempDirectoryPath)
+        {
+            var directoryRoot = Directory.GetDirectoryRoot(tempDirectoryPath);
+            return DriveInfo.GetDrives().First(drive => drive.RootDirectory.Name == directoryRoot);
+        }
+
+        private static string GetTempFileName(string tempDirectoryPath)
+        {
+            var randomFileName = GetFileNameInTempDirectory(tempDirectoryPath);
+
+            while (File.Exists(randomFileName))
+            {
+                randomFileName = GetFileNameInTempDirectory(tempDirectoryPath);
+            }
+
+            return randomFileName;
+        }
+
+        private static string GetFileNameInTempDirectory(string tempDirectoryPath)
+        {
+            return Path.Combine(tempDirectoryPath, Path.GetRandomFileName());
         }
     }
 }

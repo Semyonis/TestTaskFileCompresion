@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 
 using Core.Common;
+using Core.Tokens;
 
 namespace Core.Readers
 {
@@ -27,6 +28,8 @@ namespace Core.Readers
             inFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
 
+        public CancellationToken Token { get; set; }
+
         public void Call()
         {
             var procCount = 1;
@@ -41,6 +44,11 @@ namespace Core.Readers
             var partIndex = 0;
             while (true)
             {
+                if (Token.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 semaphore.WaitOne();
 
                 var length = GetReadLength();

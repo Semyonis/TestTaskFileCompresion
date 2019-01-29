@@ -33,15 +33,13 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\AppConstants.cs" />
     <Compile Include="Common\StreamExtensions.cs" />
     <Compile Include="Common\StreamResult.cs" />
+    <Compile Include="Tokens\CancellationToken.cs" />
+    <Compile Include="Tokens\CancellationTokenSource.cs" />
     <Compile Include="Instances\StreamResultQueue.cs" />
     <Compile Include="Instances\SystemSettingMonitor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

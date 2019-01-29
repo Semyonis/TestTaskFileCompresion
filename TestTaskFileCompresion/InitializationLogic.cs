@@ -22,11 +22,14 @@ namespace TestTaskFileCompression
 
         public static void HandleException(Exception e, string info)
         {
-            //TODO: logging
-            Console.WriteLine(info);
+            SystemSettingMonitor.Instance.LogError(e.Message + "\n" + e.StackTrace + "\n------------------\n" + info);
+
+            SystemSettingMonitor.Instance.Cancel();
         }
-        
-        private static void ReadersInitialization(CompressionMode operationType, string inputFilePath, StreamResultQueue queue)
+
+        private static void ReadersInitialization(CompressionMode operationType,
+            string inputFilePath,
+            StreamResultQueue queue)
         {
             BaseReadersLogic logic;
             if (operationType == CompressionMode.Compress)
@@ -43,7 +46,9 @@ namespace TestTaskFileCompression
             logic.Call();
         }
 
-        private static void WriterInitialization(CompressionMode operationType, string outputFilePath, StreamResultQueue queue)
+        private static void WriterInitialization(CompressionMode operationType,
+            string outputFilePath,
+            StreamResultQueue queue)
         {
             BaseWriterLogic logic;
             if (operationType == CompressionMode.Compress)
@@ -63,24 +68,30 @@ namespace TestTaskFileCompression
         private static void IntegrateReadersDependencies(BaseReadersLogic logic, StreamResultQueue queue)
         {
             logic.HandleException = HandleException;
-            logic.SetInputStreamIsSliced = queue.SetInputStreamIsSliced;
-            logic.IncrementPartCount = queue.IncrementPartCount;
 
             logic.Put = queue.Put;
 
+            logic.SetInputStreamIsSliced = queue.SetInputStreamIsSliced;
+            logic.IncrementPartCount = queue.IncrementPartCount;
+
             logic.GetProcessorCount = SystemSettingMonitor.Instance.GetProcessorCount;
             logic.GetNewStream = SystemSettingMonitor.Instance.GetNewStream;
+
+            logic.Token = SystemSettingMonitor.Instance.Token;
         }
 
         private static void IntegrateWriterDependencies(BaseWriterLogic logic, StreamResultQueue queue)
         {
             logic.HandleException = HandleException;
-            logic.Clear = SystemSettingMonitor.Instance.Clear;
 
             logic.Remove = queue.Remove;
 
             logic.GetPartById = queue.GetPartById;
             logic.IsNotEnded = queue.IsNotEnded;
+
+            logic.Clear = SystemSettingMonitor.Instance.Clear;
+
+            logic.Token = SystemSettingMonitor.Instance.Token;
         }
 
         private static void IntegrateStaticClassesDependencies()

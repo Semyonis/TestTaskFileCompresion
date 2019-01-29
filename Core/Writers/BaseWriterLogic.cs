@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 
 using Core.Common;
+using Core.Tokens;
 
 namespace Core.Writers
 {
@@ -21,6 +22,7 @@ namespace Core.Writers
         private readonly string outputFilePath;
 
         protected BaseWriterLogic(string outputFilePath) { this.outputFilePath = outputFilePath; }
+        public CancellationToken Token { get; set; }
 
         public void Call() { new Thread(WriterWorkerStart).Start(); }
 
@@ -43,6 +45,11 @@ namespace Core.Writers
 
                 while (isNotEnded)
                 {
+                    if (Token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     StreamResult nextPart = null;
 
                     var getById = GetPartById;
@@ -51,8 +58,8 @@ namespace Core.Writers
                         nextPart = getById(wrotePartCount);
                     }
 
-                    if(nextPart !=null)
-                    { 
+                    if (nextPart != null)
+                    {
                         var resultStream = nextPart.ResultStream;
 
                         InsertPartStreamInfo(outFileStream, (int) resultStream.Length);
@@ -100,10 +107,6 @@ namespace Core.Writers
                 {
                     handle(e, errorMessage);
                 }
-            }
-            finally
-            {
-                //TODO: try write again
             }
         }
 
