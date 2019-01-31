@@ -1,5 +1,5 @@
 # TestTaskFileCompresion
-Compression big file with gZip library and .net 3.5 Task
+Compression big file with gZip library and .net 3.5 Threads
 
 Simple file compress/decompress multithreaded algorithm based on  threads and GZipStream (.net 3.5 only)
 
