@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 
 using Core.Common;
 using Core.Tokens;
@@ -12,22 +11,19 @@ namespace Core.Instances
 {
     public sealed class SystemSettingMonitor
     {
-        public Action<Exception, string> HandleException;
-
         private static volatile object mutex = new object();
-
-        private static SystemSettingMonitor instance;
 
         private readonly PerformanceCounter cpuUsage;
         private readonly PerformanceCounter memUsage;
 
         private readonly CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
+
         private readonly List<string> tempFileList = new List<string>();
-        private readonly int processorCount;
+
         private readonly string errorLogFile;
-
-
-        private SystemSettingMonitor()
+        private readonly int processorCount;
+        
+        public SystemSettingMonitor()
         {
             cpuUsage = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             memUsage = new PerformanceCounter("Memory", "Available MBytes");
@@ -37,45 +33,23 @@ namespace Core.Instances
             errorLogFile = "errorLog.txt";
         }
 
-        public static SystemSettingMonitor Instance
-        {
-            get
-            {
-                lock (mutex)
-                {
-                    return instance ?? (instance = new SystemSettingMonitor());
-                }
-            }
-        }
-
-        public double CpuUsage
-        {
-            get { return cpuUsage.NextValue(); }
-        }
-
-        public double MemUsage
-        {
-            get { return memUsage.NextValue(); }
-        }
-
-        public int GetProcessorCount() { return processorCount; }
-
         public CancellationToken Token
         {
             get { return cancelTokenSource.Token; }
         }
 
+        public int GetProcessorCount() { return processorCount; }
+
         public Stream GetNewStream(int length)
         {
             while (true)
             {
-                if (CpuUsage > 90)
+                if ((double) cpuUsage.NextValue() > 90)
                 {
-                    Thread.Sleep(AppConstants.SLEEP_TIMEOUT);
                     continue;
                 }
 
-                var nextValue = MemUsage;
+                var nextValue = (double) memUsage.NextValue();
                 if (length < nextValue * AppConstants.BYTE_IN_MEGABYTE)
                 {
                     return new MemoryStream();
@@ -98,7 +72,6 @@ namespace Core.Instances
                     }
                     else
                     {
-                        Thread.Sleep(AppConstants.SLEEP_TIMEOUT);
                         continue;
                     }
                 }
@@ -112,12 +85,6 @@ namespace Core.Instances
 
                 return new FileStream(randomFileName, FileMode.CreateNew, FileAccess.ReadWrite);
             }
-        }
-
-        public void Cancel()
-        {
-            cancelTokenSource.Cancel();
-            Clear();
         }
 
         public void Clear()
@@ -137,29 +104,48 @@ namespace Core.Instances
                 {
                     var errorMessage = "Cannot delete file. " + e.Message;
 
-                    var handle = HandleException;
-                    if (handle != null)
-                    {
-                        handle(e, errorMessage);
-                    }
+                    HandleError(e, errorMessage);
                 }
             }
         }
 
-        public void LogError(string errorMessage)
+        public void HandleError(Exception exception, string additionalMessage)
         {
-            if (!File.Exists(errorLogFile))
-            {
-                File.Create(errorLogFile);
-            }
+            LogError(exception.Message
+                + "\n"
+                + exception.StackTrace
+                + "\n------------------\n"
+                + additionalMessage);
 
-            File.WriteAllText(errorLogFile, errorMessage);
+            Cancel();
+        }
+
+        private void LogError(string errorMessage)
+        {
+            lock (mutex)
+            {
+                if (!File.Exists(errorLogFile))
+                {
+                    File.Create(errorLogFile);
+                }
+            
+                File.WriteAllText(errorLogFile, errorMessage);
+            }
+        }
+
+        private void Cancel()
+        {
+            cancelTokenSource.Cancel();
+
+            Clear();
         }
 
         private static DriveInfo GetDriveInfo(string tempDirectoryPath)
         {
             var directoryRoot = Directory.GetDirectoryRoot(tempDirectoryPath);
-            return DriveInfo.GetDrives().First(drive => drive.RootDirectory.Name == directoryRoot);
+
+            return DriveInfo.GetDrives()
+                .First(drive => drive.RootDirectory.Name == directoryRoot);
         }
 
         private static string GetTempFileName(string tempDirectoryPath)

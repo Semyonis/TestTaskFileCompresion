@@ -1,102 +1,67 @@
-﻿using System;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 
 using Core.Instances;
 using Core.Readers;
+using Core.Services;
 using Core.Writers;
 
 namespace TestTaskFileCompression
 {
-    public static class InitializationLogic
+    public class InitializationLogic
     {
-        public static void InitializeWorkers(CompressionMode operationType, string inputFilePath, string outputFilePath)
+        private readonly SystemSettingMonitor monitor;
+        private readonly StreamResultQueue queue;
+
+        public InitializationLogic(SystemSettingMonitor monitor)
         {
-            var queue = new StreamResultQueue();
+            this.monitor = monitor;
 
-            WriterInitialization(operationType, outputFilePath, queue);
-
-            ReadersInitialization(operationType, inputFilePath, queue);
-
-            IntegrateStaticClassesDependencies();
+            queue = new StreamResultQueue();
         }
 
-        public static void HandleException(Exception e, string info)
-        {
-            SystemSettingMonitor.Instance.LogError(e.Message + "\n" + e.StackTrace + "\n------------------\n" + info);
-
-            SystemSettingMonitor.Instance.Cancel();
-        }
-
-        private static void ReadersInitialization(CompressionMode operationType,
+        public void InitializeWorkers(CompressionMode operationType,
             string inputFilePath,
-            StreamResultQueue queue)
+            string outputFilePath)
         {
+            ReadersInitialization(operationType, inputFilePath);
+
+            WriterInitialization(operationType, outputFilePath);
+        }
+
+        private void ReadersInitialization(CompressionMode operationType,
+            string inputFilePath)
+        {
+            var service = new ReaderService(queue, monitor);
+
             BaseReadersLogic logic;
             if (operationType == CompressionMode.Compress)
             {
-                logic = new CompressReadersLogic(inputFilePath);
+                logic = new CompressReadersLogic(service, inputFilePath);
             }
             else
             {
-                logic = new DecompressReadersLogic(inputFilePath);
+                logic = new DecompressReadersLogic(service, inputFilePath);
             }
-
-            IntegrateReadersDependencies(logic, queue);
 
             logic.Call();
         }
 
-        private static void WriterInitialization(CompressionMode operationType,
-            string outputFilePath,
-            StreamResultQueue queue)
+        private void WriterInitialization(CompressionMode operationType,
+            string outputFilePath)
         {
             BaseWriterLogic logic;
             if (operationType == CompressionMode.Compress)
             {
-                logic = new CompressWriterLogic(outputFilePath);
+                logic = new CompressWriterLogic();
             }
             else
             {
-                logic = new DecompressWriterLogic(outputFilePath);
+                logic = new DecompressWriterLogic();
             }
 
-            IntegrateWriterDependencies(logic, queue);
+            var service = new WriterService(queue, monitor);
 
-            logic.Call();
-        }
-
-        private static void IntegrateReadersDependencies(BaseReadersLogic logic, StreamResultQueue queue)
-        {
-            logic.HandleException = HandleException;
-
-            logic.Put = queue.Put;
-
-            logic.SetInputStreamIsSliced = queue.SetInputStreamIsSliced;
-            logic.IncrementPartCount = queue.IncrementPartCount;
-
-            logic.GetProcessorCount = SystemSettingMonitor.Instance.GetProcessorCount;
-            logic.GetNewStream = SystemSettingMonitor.Instance.GetNewStream;
-
-            logic.Token = SystemSettingMonitor.Instance.Token;
-        }
-
-        private static void IntegrateWriterDependencies(BaseWriterLogic logic, StreamResultQueue queue)
-        {
-            logic.HandleException = HandleException;
-
-            logic.Remove = queue.Remove;
-
-            logic.GetPartById = queue.GetPartById;
-            logic.IsNotEnded = queue.IsNotEnded;
-
-            logic.Clear = SystemSettingMonitor.Instance.Clear;
-
-            logic.Token = SystemSettingMonitor.Instance.Token;
-        }
-
-        private static void IntegrateStaticClassesDependencies()
-        {
-            SystemSettingMonitor.Instance.HandleException = HandleException;
+            logic.Call(service, outputFilePath);
         }
     }
 }

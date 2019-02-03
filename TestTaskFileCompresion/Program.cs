@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 
 using Core.Common;
+using Core.Instances;
 
 namespace TestTaskFileCompression
 {
@@ -77,16 +78,15 @@ namespace TestTaskFileCompression
                 }
             }
 
-            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            var monitor = new SystemSettingMonitor();
 
-            InitializationLogic.InitializeWorkers(operationType, inputFilePath, outputFilePath);
-        }
+            AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs eventArgs)
+            {
+                monitor.HandleError((Exception) eventArgs.ExceptionObject, "");
+            };
 
-        private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            var message = e.ExceptionObject.ToString();
-
-            InitializationLogic.HandleException((Exception) e.ExceptionObject, message);
+            new InitializationLogic(monitor)
+                .InitializeWorkers(operationType, inputFilePath, outputFilePath);
         }
     }
 }

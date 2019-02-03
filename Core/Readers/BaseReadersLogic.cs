@@ -3,115 +3,108 @@ using System.IO;
 using System.Threading;
 
 using Core.Common;
-using Core.Tokens;
+using Core.Services;
 
 namespace Core.Readers
 {
     public abstract class BaseReadersLogic
     {
-        public Action<Exception, string> HandleException;
+        private static volatile object mutex = new object();
 
-        public Action SetInputStreamIsSliced;
-        public Action IncrementPartCount;
+        private readonly ReaderService service;
 
-        public Action<StreamResult> Put;
+        protected readonly Stream inputStream;
 
-        public Func<int, Stream> GetNewStream;
-        public Func<int> GetProcessorCount;
+        private int globalPartIndex;
 
-        private Semaphore semaphore;
-
-        protected readonly Stream inFileStream;
-
-        protected BaseReadersLogic(string inputFilePath)
+        protected BaseReadersLogic(ReaderService readerService, string inputFilePath)
         {
-            inFileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        }
+            service = readerService;
 
-        public CancellationToken Token { get; set; }
+            inputStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
 
         public void Call()
         {
-            var procCount = 1;
-            var getProcessorCount = GetProcessorCount;
-            if (getProcessorCount != null)
+            globalPartIndex = 0;
+
+            var procCount = service.GetProcessorCount();
+            for (var index = 0; index < procCount - 1; index++)
             {
-                procCount = getProcessorCount();
+                new Thread(ReaderWorkerStart).Start();
             }
+        }
 
-            semaphore = new Semaphore(procCount, procCount);
-
-            var partIndex = 0;
-            while (true)
+        private void ReaderWorkerStart()
+        {
+            try
             {
-                if (Token.IsCancellationRequested)
+                while (true)
                 {
-                    return;
-                }
-
-                semaphore.WaitOne();
-
-                var length = GetReadLength();
-
-                Stream inPartStream = null;
-                var getNewStream = GetNewStream;
-                if (getNewStream != null)
-                {
-                    inPartStream = getNewStream(length);
-                }
-
-                var readCount = inFileStream.CopyTo(inPartStream, new byte[length], 0, length);
-
-                if (readCount == 0)
-                {
-                    var setStreamIsSliced = SetInputStreamIsSliced;
-                    if (setStreamIsSliced != null)
+                    if (service.Token.IsCancellationRequested)
                     {
-                        setStreamIsSliced();
+                        return;
                     }
 
-                    inFileStream.Close();
+                    int localPartIndex;
+                    int readByteCount;
+                    Stream partOfInputStream;
+                    lock (mutex)
+                    {
+                        if (service.InputStreamIsSliced)
+                        {
+                            return;
+                        }
 
-                    return;
+                        localPartIndex = globalPartIndex;
+
+                        var countToRead = GetCountToRead();
+
+                        partOfInputStream = service.GetNewStream(countToRead);
+
+                        readByteCount = inputStream.CopyTo(partOfInputStream, new byte[countToRead], 0, countToRead);
+
+                        if (readByteCount == 0)
+                        {
+                            service.SetInputStreamIsSliced();
+
+                            inputStream.Close();
+
+                            return;
+                        }
+
+                        globalPartIndex++;
+                    }
+
+                    service.IncrementReadCount();
+
+                    partOfInputStream.Seek(0, SeekOrigin.Begin);
+
+                    GetParameters(partOfInputStream, readByteCount, localPartIndex)
+                        .StartWorker();
                 }
+            }
+            catch (Exception e)
+            {
+                var errorMessage = "Exception in writer worker: " + e.Message;
 
-                inPartStream.Seek(0, SeekOrigin.Begin);
-
-                var readerParameters = GetParameters(inPartStream, readCount, partIndex);
-
-                ReaderThreadStart(readerParameters);
-
-                partIndex++;
-
-                var incrementPartCount = IncrementPartCount;
-                if (incrementPartCount != null)
-                {
-                    incrementPartCount();
-                }
-
-                semaphore.Release();
+                service.HandleException(e, errorMessage);
             }
         }
 
         private BaseReader GetParameters(Stream inPartStream, int length, int partIndex)
         {
-            var outPartStream = GetNewStream(length);
+            var outPartStream = service.GetNewStream(length);
 
-            var parameters = GetOperationParameters(inPartStream, outPartStream, partIndex);
-
-            parameters.HandleException = HandleException;
-            parameters.PutInQueue = Put;
-
-            return parameters;
+            return GetOperationParameters(service, inPartStream, outPartStream, partIndex);
         }
 
-        private static void ReaderThreadStart(BaseReader parameters) { new Thread(parameters.StartWorker).Start(); }
-
         protected abstract BaseReader GetOperationParameters(
+            ReaderService service,
             Stream inPartStream,
             Stream outPartStream,
             int partIndex);
 
-        protected abstract int GetReadLength();
+        protected abstract int GetCountToRead();
     }
 }

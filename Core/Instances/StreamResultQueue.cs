@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 using Core.Common;
 
@@ -9,19 +10,35 @@ namespace Core.Instances
     {
         private static volatile object mutex = new object();
 
+        private readonly EventWaitHandle eventWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
+
         private readonly List<StreamResult> queue = new List<StreamResult>();
 
-        private bool isStreamSliceFinished;
+        private int totalReadCount;
+        private int totalWriteCount;
 
-        private int totalPartCount;
+        public bool IsInputStreamSliced { get; private set; }
 
-        public StreamResult GetPartById(int index)
+        public bool IsWritingNotEnded
         {
+            get { return totalWriteCount < totalReadCount || !IsInputStreamSliced; }
+        }
+
+        public StreamResult GetNextPart()
+        {
+            // Checking part before wait
+            CheckNextPart();
+
+            // Exist 2 situations:
+            // - next part already in queue (check part before wait)
+            // - next part still is not putted in queue (check part when put it in queue)
+            eventWaitHandle.WaitOne();
+
             StreamResult result;
 
             lock (mutex)
             {
-                result = queue.FirstOrDefault(item => item.PartIndex == index);
+                result = queue.FirstOrDefault(item => item.PartIndex == totalWriteCount);
             }
 
             return result;
@@ -33,6 +50,9 @@ namespace Core.Instances
             {
                 queue.Add(result);
             }
+
+            // Checking part when put it in queue
+            CheckNextPart();
         }
 
         public void Remove(StreamResult nextPart)
@@ -43,10 +63,22 @@ namespace Core.Instances
             }
         }
 
-        public void SetInputStreamIsSliced() { isStreamSliceFinished = true; }
+        private void CheckNextPart()
+        {
+            lock (mutex)
+            {
+                if (queue.Any(item => item.PartIndex == totalWriteCount))
+                {
+                    eventWaitHandle.Set();
+                }
+            }
+        }
 
-        public void IncrementPartCount() { totalPartCount++; }
+        public void SetInputStreamIsSliced() { IsInputStreamSliced = true; }
 
-        public bool IsNotEnded(int wrotePartCount) { return wrotePartCount < totalPartCount || !isStreamSliceFinished; }
+        public void IncrementReadCount() { totalReadCount++; }
+
+        public void IncrementWriteCount() { totalWriteCount++; }
+
     }
 }

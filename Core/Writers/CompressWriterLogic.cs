@@ -7,8 +7,6 @@ namespace Core.Writers
 {
     public sealed class CompressWriterLogic : BaseWriterLogic
     {
-        public CompressWriterLogic(string outputFilePath) : base(outputFilePath) { }
-
         protected override void InsertPartStreamInfo(Stream outFileStream, object info)
         {
             var length = (int) info;

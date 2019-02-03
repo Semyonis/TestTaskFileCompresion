@@ -3,110 +3,65 @@ using System.IO;
 using System.Threading;
 
 using Core.Common;
-using Core.Tokens;
+using Core.Services;
 
 namespace Core.Writers
 {
     public abstract class BaseWriterLogic
     {
-        public Action Clear;
+        private WriterService service;
 
-        public Action<StreamResult> Remove;
+        private Stream outFileStream;
 
-        public Action<Exception, string> HandleException;
+        public void Call(WriterService writerService, string outputFilePath)
+        {
+            service = writerService;
 
-        public Func<int, bool> IsNotEnded;
+            outFileStream = File.Create(outputFilePath);
 
-        public Func<int, StreamResult> GetPartById;
-
-        private readonly string outputFilePath;
-
-        protected BaseWriterLogic(string outputFilePath) { this.outputFilePath = outputFilePath; }
-        public CancellationToken Token { get; set; }
-
-        public void Call() { new Thread(WriterWorkerStart).Start(); }
+            new Thread(WriterWorkerStart).Start();
+        }
 
         private void WriterWorkerStart()
         {
             try
             {
-                var outFileStream = File.Create(outputFilePath);
 
                 SignOutStream(outFileStream);
 
-                var wrotePartCount = 0;
-
-                var isNotEnded = false;
-                var notEnded = IsNotEnded;
-                if (notEnded != null)
+                while (service.IsNotEnded)
                 {
-                    isNotEnded = notEnded(wrotePartCount);
-                }
-
-                while (isNotEnded)
-                {
-                    if (Token.IsCancellationRequested)
+                    if (service.Token.IsCancellationRequested)
                     {
                         return;
                     }
 
-                    StreamResult nextPart = null;
+                    var nextPart = service.GetNextPart();
 
-                    var getById = GetPartById;
-                    if (getById != null)
-                    {
-                        nextPart = getById(wrotePartCount);
-                    }
+                    var resultStream = nextPart.ResultStream;
 
-                    if (nextPart != null)
-                    {
-                        var resultStream = nextPart.ResultStream;
+                    InsertPartStreamInfo(outFileStream, (int) resultStream.Length);
 
-                        InsertPartStreamInfo(outFileStream, (int) resultStream.Length);
+                    resultStream.Seek(0, SeekOrigin.Begin);
+                    var buffer = new byte[resultStream.Length];
+                    resultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
 
-                        resultStream.Seek(0, SeekOrigin.Begin);
-                        var buffer = new byte[resultStream.Length];
-                        resultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
+                    resultStream.Close();
 
-                        resultStream.Close();
+                    service.Remove(nextPart);
 
-                        var remove = Remove;
-                        if (remove != null)
-                        {
-                            remove(nextPart);
-                        }
-
-                        wrotePartCount++;
-                    }
-                    else
-                    {
-                        Thread.Sleep(AppConstants.SLEEP_TIMEOUT);
-                    }
-
-                    notEnded = IsNotEnded;
-                    if (notEnded != null)
-                    {
-                        isNotEnded = notEnded(wrotePartCount);
-                    }
+                    service.IncrementWriteCount();
                 }
 
                 outFileStream.Close();
 
-                var clear = Clear;
-                if (clear != null)
-                {
-                    clear();
-                }
+                service.Clear();
             }
             catch (Exception e)
             {
                 var errorMessage = "Exception in writer worker: " + e.Message;
 
-                var handle = HandleException;
-                if (handle != null)
-                {
-                    handle(e, errorMessage);
-                }
+                service.HandleException(e, errorMessage);
             }
         }
 

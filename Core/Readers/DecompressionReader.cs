@@ -1,13 +1,14 @@
 ﻿using System.IO;
 
 using Core.Common;
+using Core.Services;
 
 namespace Core.Readers
 {
     public sealed class DecompressionReader : BaseReader
     {
-        public DecompressionReader(Stream inStream, Stream outStream, int partIndex)
-            : base(inStream, outStream, partIndex) { }
+        public DecompressionReader(ReaderService service, Stream inStream, Stream outStream, int partIndex)
+            : base(service, inStream, outStream, partIndex) { }
 
         protected override void StartOperation() { Decompress(); }
 

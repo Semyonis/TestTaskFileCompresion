@@ -38,6 +38,9 @@
     <Compile Include="Common\AppConstants.cs" />
     <Compile Include="Common\StreamExtensions.cs" />
     <Compile Include="Common\StreamResult.cs" />
+    <Compile Include="Services\BaseService.cs" />
+    <Compile Include="Services\ReaderService.cs" />
+    <Compile Include="Services\WriterService.cs" />
     <Compile Include="Tokens\CancellationToken.cs" />
     <Compile Include="Tokens\CancellationTokenSource.cs" />
     <Compile Include="Instances\StreamResultQueue.cs" />

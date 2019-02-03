@@ -1,23 +1,21 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
 using Core.Common;
+using Core.Services;
 
 namespace Core.Readers
 {
     public abstract class BaseReader
     {
-        public Action<Exception, string> HandleException;
-
-        public Action<StreamResult> PutInQueue;
-
         private readonly int partIndex;
+        private readonly ReaderService service;
 
         protected readonly Stream inStream;
         protected readonly Stream outStream;
 
-        protected BaseReader(Stream inStream, Stream outStream, int partIndex)
+        protected BaseReader(ReaderService service, Stream inStream, Stream outStream, int partIndex)
         {
+            this.service = service;
             this.inStream = inStream;
             this.outStream = outStream;
 
@@ -26,28 +24,11 @@ namespace Core.Readers
 
         public void StartWorker()
         {
-            try
-            {
-                StartOperation();
+            StartOperation();
 
-                inStream.Close();
+            inStream.Close();
 
-                var put = PutInQueue;
-                if (put != null)
-                {
-                    put(new StreamResult(partIndex, outStream));
-                }
-            }
-            catch (Exception e)
-            {
-                var errorMessage = "Exception in operation worker: " + e.Message;
-
-                var handle = HandleException;
-                if (handle != null)
-                {
-                    handle(e, errorMessage);
-                }
-            }
+            service.Put(new StreamResult(partIndex, outStream));
         }
 
         protected abstract void StartOperation();
