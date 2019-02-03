@@ -6,6 +6,6 @@ namespace Core.Writers
     {
         protected override void InsertPartStreamInfo(Stream outFileStream, object info) { }
 
-        protected override void SignOutStream(Stream outFileStream) { }
+        protected override void SignOutputStream(Stream outFileStream) { }
     }
 }

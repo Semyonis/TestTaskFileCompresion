@@ -16,6 +16,7 @@ namespace Core.Readers
         protected BaseReader(ReaderService service, Stream inStream, Stream outStream, int partIndex)
         {
             this.service = service;
+
             this.inStream = inStream;
             this.outStream = outStream;
 

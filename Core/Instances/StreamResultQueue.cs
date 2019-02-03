@@ -12,12 +12,12 @@ namespace Core.Instances
 
         private readonly EventWaitHandle eventWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
 
-        private readonly List<StreamResult> queue = new List<StreamResult>();
+        private volatile List<StreamResult> queue = new List<StreamResult>();
 
         private int totalReadCount;
         private int totalWriteCount;
 
-        public bool IsInputStreamSliced { get; private set; }
+        public bool IsInputStreamSliced { get; set; }
 
         public bool IsWritingNotEnded
         {
@@ -27,7 +27,13 @@ namespace Core.Instances
         public StreamResult GetNextPart()
         {
             // Checking part before wait
-            CheckNextPart();
+            lock (mutex)
+            {
+                if (queue.Any(item => item.PartIndex == totalWriteCount))
+                {
+                    eventWaitHandle.Set();
+                }
+            }
 
             // Exist 2 situations:
             // - next part already in queue (check part before wait)
@@ -38,7 +44,11 @@ namespace Core.Instances
 
             lock (mutex)
             {
-                result = queue.FirstOrDefault(item => item.PartIndex == totalWriteCount);
+                totalWriteCount++;
+
+                result = queue.First(item => item.PartIndex == totalWriteCount);
+
+                queue.Remove(result);
             }
 
             return result;
@@ -48,37 +58,16 @@ namespace Core.Instances
         {
             lock (mutex)
             {
+                totalReadCount++;
+
                 queue.Add(result);
-            }
 
-            // Checking part when put it in queue
-            CheckNextPart();
-        }
-
-        public void Remove(StreamResult nextPart)
-        {
-            lock (mutex)
-            {
-                queue.Remove(nextPart);
-            }
-        }
-
-        private void CheckNextPart()
-        {
-            lock (mutex)
-            {
-                if (queue.Any(item => item.PartIndex == totalWriteCount))
+                // Checking part when put it in queue
+                if (result.PartIndex == totalWriteCount)
                 {
                     eventWaitHandle.Set();
                 }
             }
         }
-
-        public void SetInputStreamIsSliced() { IsInputStreamSliced = true; }
-
-        public void IncrementReadCount() { totalReadCount++; }
-
-        public void IncrementWriteCount() { totalWriteCount++; }
-
     }
 }

@@ -13,13 +13,10 @@ namespace Core.Services
         public bool InputStreamIsSliced
         {
             get { return queue.IsInputStreamSliced; }
+            set { queue.IsInputStreamSliced = value; }
         }
 
         public void Put(StreamResult result) { queue.Put(result); }
-
-        public void SetInputStreamIsSliced() { queue.SetInputStreamIsSliced(); }
-
-        public void IncrementReadCount() { queue.IncrementReadCount(); }
 
         public int GetProcessorCount() { return monitor.GetProcessorCount(); }
 

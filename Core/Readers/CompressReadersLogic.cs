@@ -7,9 +7,6 @@ namespace Core.Readers
 {
     public sealed class CompressReadersLogic : BaseReadersLogic
     {
-        public CompressReadersLogic(ReaderService service, string inputFilePath)
-            : base(service, inputFilePath) { }
-
         protected override BaseReader GetOperationParameters(
             ReaderService service,
             Stream inPartStream,
@@ -19,6 +16,8 @@ namespace Core.Readers
             return new CompressionReader(service, inPartStream, outPartStream, partIndex);
         }
 
-        protected override int GetCountToRead() { return AppConstants.COMPRESS_READ_LENGTH; }
+        protected override int GetCountToRead(Stream stream) { return AppConstants.COMPRESS_READ_LENGTH; }
+
+        protected override void SeekStart(Stream stream) { }
     }
 }

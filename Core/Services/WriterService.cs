@@ -15,10 +15,6 @@ namespace Core.Services
 
         public StreamResult GetNextPart() { return queue.GetNextPart(); }
 
-        public void Remove(StreamResult nextPart) { queue.Remove(nextPart); }
-
-        public void IncrementWriteCount() { queue.IncrementWriteCount(); }
-
         public void Clear() { monitor.Clear(); }
     }
 }

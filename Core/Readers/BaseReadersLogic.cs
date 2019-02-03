@@ -11,22 +11,21 @@ namespace Core.Readers
     {
         private static volatile object mutex = new object();
 
-        private readonly ReaderService service;
-
-        protected readonly Stream inputStream;
-
         private int globalPartIndex;
 
-        protected BaseReadersLogic(ReaderService readerService, string inputFilePath)
+        private ReaderService service;
+
+        private Stream inputStream;
+
+        public void Call(ReaderService readerService, string inputFilePath)
         {
+            globalPartIndex = 0;
+
             service = readerService;
 
             inputStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        }
 
-        public void Call()
-        {
-            globalPartIndex = 0;
+            SeekStart(inputStream);
 
             var procCount = service.GetProcessorCount();
             for (var index = 0; index < procCount - 1; index++)
@@ -56,27 +55,26 @@ namespace Core.Readers
                             return;
                         }
 
-                        localPartIndex = globalPartIndex;
-
-                        var countToRead = GetCountToRead();
+                        var countToRead = GetCountToRead(inputStream);
 
                         partOfInputStream = service.GetNewStream(countToRead);
 
-                        readByteCount = inputStream.CopyTo(partOfInputStream, new byte[countToRead], 0, countToRead);
+                        readByteCount = inputStream
+                            .CopyTo(partOfInputStream, new byte[countToRead], 0, countToRead);
 
                         if (readByteCount == 0)
                         {
-                            service.SetInputStreamIsSliced();
+                            service.InputStreamIsSliced = true;
 
                             inputStream.Close();
 
                             return;
                         }
 
+                        localPartIndex = globalPartIndex;
+
                         globalPartIndex++;
                     }
-
-                    service.IncrementReadCount();
 
                     partOfInputStream.Seek(0, SeekOrigin.Begin);
 
@@ -105,6 +103,8 @@ namespace Core.Readers
             Stream outPartStream,
             int partIndex);
 
-        protected abstract int GetCountToRead();
+        protected abstract int GetCountToRead(Stream stream);
+
+        protected abstract void SeekStart(Stream stream);
     }
 }

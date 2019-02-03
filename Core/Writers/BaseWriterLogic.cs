@@ -11,13 +11,13 @@ namespace Core.Writers
     {
         private WriterService service;
 
-        private Stream outFileStream;
+        private Stream outputStream;
 
         public void Call(WriterService writerService, string outputFilePath)
         {
             service = writerService;
 
-            outFileStream = File.Create(outputFilePath);
+            outputStream = File.Create(outputFilePath);
 
             new Thread(WriterWorkerStart).Start();
         }
@@ -26,8 +26,7 @@ namespace Core.Writers
         {
             try
             {
-
-                SignOutStream(outFileStream);
+                SignOutputStream(outputStream);
 
                 while (service.IsNotEnded)
                 {
@@ -40,20 +39,16 @@ namespace Core.Writers
 
                     var resultStream = nextPart.ResultStream;
 
-                    InsertPartStreamInfo(outFileStream, (int) resultStream.Length);
+                    InsertPartStreamInfo(outputStream, (int) resultStream.Length);
 
                     resultStream.Seek(0, SeekOrigin.Begin);
                     var buffer = new byte[resultStream.Length];
-                    resultStream.CopyTo(outFileStream, buffer, 0, buffer.Length);
+                    resultStream.CopyTo(outputStream, buffer, 0, buffer.Length);
 
                     resultStream.Close();
-
-                    service.Remove(nextPart);
-
-                    service.IncrementWriteCount();
                 }
 
-                outFileStream.Close();
+                outputStream.Close();
 
                 service.Clear();
             }
@@ -65,7 +60,7 @@ namespace Core.Writers
             }
         }
 
-        protected abstract void SignOutStream(Stream outFileStream);
+        protected abstract void SignOutputStream(Stream outFileStream);
 
         protected abstract void InsertPartStreamInfo(Stream outFileStream, object info);
     }

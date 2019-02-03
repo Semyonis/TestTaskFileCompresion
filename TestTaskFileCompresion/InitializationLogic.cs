@@ -36,14 +36,14 @@ namespace TestTaskFileCompression
             BaseReadersLogic logic;
             if (operationType == CompressionMode.Compress)
             {
-                logic = new CompressReadersLogic(service, inputFilePath);
+                logic = new CompressReadersLogic();
             }
             else
             {
-                logic = new DecompressReadersLogic(service, inputFilePath);
+                logic = new DecompressReadersLogic();
             }
 
-            logic.Call();
+            logic.Call(service, inputFilePath);
         }
 
         private void WriterInitialization(CompressionMode operationType,

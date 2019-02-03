@@ -11,8 +11,6 @@ namespace Core.Instances
 {
     public sealed class SystemSettingMonitor
     {
-        private static volatile object mutex = new object();
-
         private readonly PerformanceCounter cpuUsage;
         private readonly PerformanceCounter memUsage;
 
@@ -122,14 +120,20 @@ namespace Core.Instances
 
         private void LogError(string errorMessage)
         {
-            lock (mutex)
+            lock (errorLogFile)
             {
                 if (!File.Exists(errorLogFile))
                 {
                     File.Create(errorLogFile);
                 }
             
-                File.WriteAllText(errorLogFile, errorMessage);
+                using (var stream = new FileStream(errorLogFile, FileMode.Append))
+                {
+                    using (var bw = new BinaryWriter(stream))
+                    {
+                        bw.Write(errorMessage);
+                    }
+                }
             }
         }
 

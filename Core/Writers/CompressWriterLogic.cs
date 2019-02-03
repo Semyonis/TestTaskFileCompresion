@@ -13,7 +13,7 @@ namespace Core.Writers
             WriteIntToStream(outFileStream, length);
         }
 
-        protected override void SignOutStream(Stream outFileStream)
+        protected override void SignOutputStream(Stream outFileStream)
         {
             WriteIntToStream(outFileStream, AppConstants.FORMAT_START_CHARS);
         }
