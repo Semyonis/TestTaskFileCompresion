@@ -5,17 +5,6 @@ Simple file compress/decompress multithreaded algorithm based on  threads and GZ
 
 Problems:
 
-1)InitializationLogic. Внедрить нормальную Dep Inj.
+1)StreamResultQueue. Работает, но синхронизация сложна для понимания. Возможно можно лучше, но это не точно.
 
-2)BaseWriterLogic. Декомпозировать глубже. По примеру BaseReadersLogic.
-
-3)SystemSettingMonitor. Вынести логирование.
-
-4)StreamResultQueue. Работает, но была проблема с которой я не разобрался. 
-При синхронизации чезер инстанс (Instance) падало с ошибкой связанной с изменением коллекции queue. 
-Воспроизводилось только для очель больших вайлов (порядка 32г) и только при декомпрессии.
-
-5)CancellationTokenSource. Наивная реализация подсмотренная в mscorlib :)
-
-6)BaseReader and BaseWriterLogic. После catche в finally можно было попробовать запустить процесс еще раз.
-И только после этого останавливать через token.
+2)BaseReaderLogic. Слишком большой блок стоит в lock. Возможно можно лучше, но это не точно.
