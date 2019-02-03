@@ -71,6 +71,8 @@ namespace Core.Readers
                             return;
                         }
 
+                        service.IncrementReadPartCount();
+
                         localPartIndex = globalPartIndex;
 
                         globalPartIndex++;

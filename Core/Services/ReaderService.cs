@@ -18,8 +18,10 @@ namespace Core.Services
 
         public void Put(StreamResult result) { queue.Put(result); }
 
-        public int GetProcessorCount() { return monitor.GetProcessorCount(); }
+        public void IncrementReadPartCount() { queue.IncrementReadPartCount(); }
 
         public Stream GetNewStream(int length) { return monitor.GetNewStream(length); }
+
+        public int GetProcessorCount() { return monitor.ProcessorCount; }
     }
 }

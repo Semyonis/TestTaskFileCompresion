@@ -44,11 +44,11 @@ namespace Core.Instances
 
             lock (mutex)
             {
-                totalWriteCount++;
-
                 result = queue.First(item => item.PartIndex == totalWriteCount);
 
                 queue.Remove(result);
+
+                totalWriteCount++;
             }
 
             return result;
@@ -58,8 +58,6 @@ namespace Core.Instances
         {
             lock (mutex)
             {
-                totalReadCount++;
-
                 queue.Add(result);
 
                 // Checking part when put it in queue
@@ -69,5 +67,7 @@ namespace Core.Instances
                 }
             }
         }
+
+        public void IncrementReadPartCount() { totalReadCount++; }
     }
 }

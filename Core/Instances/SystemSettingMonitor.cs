@@ -19,16 +19,15 @@ namespace Core.Instances
         private readonly List<string> tempFileList = new List<string>();
 
         private readonly string errorLogFile;
-        private readonly int processorCount;
         
         public SystemSettingMonitor()
         {
             cpuUsage = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             memUsage = new PerformanceCounter("Memory", "Available MBytes");
 
-            processorCount = Environment.ProcessorCount;
-
             errorLogFile = "errorLog.txt";
+
+            ProcessorCount = Environment.ProcessorCount;
         }
 
         public CancellationToken Token
@@ -36,7 +35,7 @@ namespace Core.Instances
             get { return cancelTokenSource.Token; }
         }
 
-        public int GetProcessorCount() { return processorCount; }
+        public int ProcessorCount { get; }
 
         public Stream GetNewStream(int length)
         {
